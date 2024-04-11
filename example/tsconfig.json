@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "react-native-ssl-publickey": ["../src/index"],
+      "react-native-ssl-publickey/*": ["../src/*"]
+    }
+  }
+}
