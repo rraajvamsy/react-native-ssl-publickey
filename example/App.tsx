@@ -14,7 +14,7 @@ export default function App() {
   })
   return (
     <View style={styles.container}>
-      <Text>PinSHA256{hash}</Text>
+      <Text>PinSHA256:{hash}</Text>
     </View>
   );
 }
