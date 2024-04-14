@@ -1,26 +1,15 @@
-import { NativeModulesProxy, EventEmitter, Subscription } from 'expo-modules-core';
+import { requireNativeModule } from 'expo-modules-core';
 
-// Import the native module. On web, it will be resolved to ReactNativeSslPublickey.web.ts
-// and on native platforms to ReactNativeSslPublickey.ts
-import ReactNativeSslPublickeyModule from './ReactNativeSslPublickeyModule';
-import ReactNativeSslPublickeyView from './ReactNativeSslPublickeyView';
-import { ChangeEventPayload, ReactNativeSslPublickeyViewProps } from './ReactNativeSslPublickey.types';
-
-// Get the native constant value.
-export const PI = ReactNativeSslPublickeyModule.PI;
-
-export function hello(): string {
-  return ReactNativeSslPublickeyModule.hello();
+export async function getPublicHashKey(domain: string): Promise<string> {
+  try {
+    console.log("Index", domain);
+    const ReactNativeSslPublickeyModule = await requireNativeModule('ReactNativeSslPublickey');
+    console.log('====================================');
+    console.log("index", ReactNativeSslPublickeyModule);
+    console.log('====================================');
+    return ReactNativeSslPublickeyModule && await ReactNativeSslPublickeyModule.getPublicHashKey(domain);
+  } catch (error) {
+    // console.error('Error while getting public hash key:', error);
+    return ''; // or handle the error in a way that makes sense for your application
+  }
 }
-
-export async function setValueAsync(value: string) {
-  return await ReactNativeSslPublickeyModule.setValueAsync(value);
-}
-
-const emitter = new EventEmitter(ReactNativeSslPublickeyModule ?? NativeModulesProxy.ReactNativeSslPublickey);
-
-export function addChangeListener(listener: (event: ChangeEventPayload) => void): Subscription {
-  return emitter.addListener<ChangeEventPayload>('onChange', listener);
-}
-
-export { ReactNativeSslPublickeyView, ReactNativeSslPublickeyViewProps, ChangeEventPayload };

@@ -2,46 +2,81 @@ package expo.modules.sslpublickey
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
+import java.util.Base64
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLPeerUnverifiedException
+import javax.security.cert.X509Certificate
+import java.net.URL
+import java.io.IOException
+
+import android.util.Log
 
 class ReactNativeSslPublickeyModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
+
   override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ReactNativeSslPublickey')` in JavaScript.
     Name("ReactNativeSslPublickey")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants(
-      "PI" to Math.PI
-    )
-
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
-    }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(ReactNativeSslPublickeyView::class) {
-      // Defines a setter for the `name` prop.
-      Prop("name") { view: ReactNativeSslPublickeyView, prop: String ->
-        println(prop)
+    Function("getPublicHashKey") { domain: String ->
+      try {
+        val hash = getSSLCertificateHash(domain)
+        hash
+      } catch (e: Exception) {
+        Log.e("ReactNativeSslPublickey", "Error fetching pin for domain: $domain", e)
+        null
       }
     }
   }
+
+  private fun getSSLCertificateHash(domain: String): String? {
+    Log.d("ReactNativeSslPublickey", "Fetching public key hash for domain: $domain")
+
+    val connection = (URL("https://$domain").openConnection() as HttpsURLConnection).apply {
+        connect()
+        Log.d("ReactNativeSslPublickey", "Connection established for domain: $domain")
+    }
+
+    return try {
+        val certs = connection.serverCertificates
+        Log.d("ReactNativeSslPublickey", "Certificates found: ${certs.size}")
+        
+        val hashList = mutableListOf<String>()
+
+        certs.forEachIndexed { index, cert ->
+            Log.d("ReactNativeSslPublickey", "Certificate[$index]: $cert")
+            try {
+                val publicKey = cert.publicKey.encoded
+                Log.d("ReactNativeSslPublickey", "Extracted public key from certificate")
+
+                val digest = MessageDigest.getInstance("SHA-256")
+                Log.d("ReactNativeSslPublickey", "Created SHA-256 digest instance")
+
+                val hash = digest.digest(publicKey)
+                Log.d("ReactNativeSslPublickey", "Computed SHA-256 hash of public key")
+
+                val hashString = Base64.getEncoder().encodeToString(hash)
+                Log.d("ReactNativeSslPublickey", "Hash of public key: $hashString")
+
+                hashList.add(hashString)
+            } catch (e: Exception) {
+                Log.e("ReactNativeSslPublickey", "Error processing certificate[$index]: $e")
+            }
+        }
+
+        if (hashList.isEmpty()) {
+            throw SSLPeerUnverifiedException("No SSL certificates found for the domain.")
+        }
+
+        // Return the concatenated SHA-256 hashes of all the public keys
+        hashList[0]
+    } catch (e: Exception) {
+        Log.e("ReactNativeSslPublickey", "Error fetching certificates: $e")
+        null
+    } finally {
+        connection.disconnect()
+    }
+}
+
+
 }
