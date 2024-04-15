@@ -53,8 +53,6 @@ class SslPinningDelegate: NSObject, URLSessionDelegate {
         if let derData = pemToDer(pemString: pemString) {
             let sha256Hash = sha256(data: derData)
             base64 = dataToBase64(data: sha256Hash)
-        } else {
-            print("Failed to convert PEM to DER")
         }
         completionHandler(.useCredential, URLCredential(trust: serverTrust))
     }
@@ -65,7 +63,6 @@ public class ReactNativeSslPublickeyModule: Module {
         Name("ReactNativeSslPublickey")
 
         AsyncFunction("getPublicHashKey") { (domain: String) async -> String? in
-            NSLog("Fetching SSL certificate hash for domain: %@", domain)
             
             // Check if domain is empty or nil
             guard !domain.isEmpty else {
@@ -89,7 +86,4 @@ public class ReactNativeSslPublickeyModule: Module {
             }
         }
     }
-    
-
-
 }
